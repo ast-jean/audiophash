@@ -1,4 +1,4 @@
-package decode
+package audio
 
 import (
 	"bytes"

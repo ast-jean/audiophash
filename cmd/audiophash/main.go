@@ -5,19 +5,18 @@ import (
 	"errors"
 	"fmt"
 
-	"pkg/audio"
-	"pkg/config"
-	"pkg/features"
-	"pkg/fft"
-	"pkg/hash"
+	"github.com/ast-jean/audiophash/pkg/audio"
+	"github.com/ast-jean/audiophash/pkg/config"
+	"github.com/ast-jean/audiophash/pkg/features"
+	"github.com/ast-jean/audiophash/pkg/fft"
+	"github.com/ast-jean/audiophash/pkg/hash"
 )
 
 // AudioPHashBytes is the canonical entry point for the perceptual hash.
-// - b: raw audio bytes (currently we expect PCM16LE raw bytes or WAV if you implement the WAV decoder).
+// - b: raw audio bytes (PCM16/ WAV / MP3 bytes depending on fileformat).
 // - cfg: optional pointer to config.Config. If nil, config.DefaultConfig(44100) is used.
+// - fileformat: "pcm16", "pcm16le", "wav", "mp3", etc. (decoder must be implemented in audio pkg)
 // Returns a 16-character hex string (64-bit hash) or an error.
-//
-// This file wires the pipeline; each step delegates to its package. Many steps are placeholders
 func AudioPHashBytes(b []byte, cfg *config.Config, fileformat string) (string, error) {
 	// ---------------------------
 	// Defaults & validation
@@ -38,42 +37,47 @@ func AudioPHashBytes(b []byte, cfg *config.Config, fileformat string) (string, e
 	// ---------------------------
 	// Decode -> []float64 samples (mono)
 	// ---------------------------
-	// Expect audio package to provide DecodePCM16LEToFloat64 or WAV decoder.
-	// decode should return samples and sampleRate (sr). For raw PCM16LE raw bytes the SR
-	// is not encoded in the bytes — decoder may accept an expected SR parameter or return 0.
+	var (
+		samples []float64
+		sr      int
+		err     error
+	)
+
 	switch fileformat {
 	case "pcm16", "pcm16le":
-		samples, sr, err = decode.DecodePCM16LEToFloat64(b)
+		samples, sr, err = audio.DecodePCM16LEToFloat64(b)
 		if err != nil {
 			return "", fmt.Errorf("decode PCM16LE: %w", err)
 		}
 
 	case "wav":
-		samples, sr, err = decode.DecodeWAVToFloat64(b)
+		samples, sr, err = audio.DecodeWAVToFloat64(b)
 		if err != nil {
 			return "", fmt.Errorf("decode WAV: %w", err)
 		}
 
 	default:
-		return "", fmt.Errorf("unsupported audio format: %s", format)
+		return "", fmt.Errorf("unsupported audio format: %s", fileformat)
 	}
-	// Resample according to Config
+
+	// ---------------------------
+	// Resample if needed (decoder returns sr; raw PCM may return sr==0)
+	// ---------------------------
 	if sr != 0 && sr != localCfg.SampleRate {
 		samples, err = audio.Resample(samples, sr, localCfg.SampleRate)
 		if err != nil {
 			return "", fmt.Errorf("resample: %w", err)
 		}
 	}
+
 	// ---------------------------
 	// Normalize amplitude
 	// ---------------------------
-	// Normalize to [-1.0, +1.0] using peak normalization (or RMS if preferred).
 	samples = audio.Normalize(samples)
 
 	// ---------------------------
 	// Framing & windowing
 	// ---------------------------
-	// Use configured frame size & hop. audio.Frame returns windowed frames (each length FrameSize).
 	frames := audio.Frame(samples, localCfg.FrameSize, localCfg.Hop)
 	if len(frames) == 0 {
 		return "", errors.New("no frames produced (audio too short?)")
@@ -82,33 +86,30 @@ func AudioPHashBytes(b []byte, cfg *config.Config, fileformat string) (string, e
 	// ---------------------------
 	// FFT per frame -> magnitude spectra
 	// ---------------------------
-	// fft package should expose ComputeMagnitude(frame []float64) []float64
-	// which computes an N-point FFT (N==len(frame)) and returns magnitudes for bins 0..N/2.
 	frameMags := make([][]float64, len(frames))
 	for i, f := range frames {
 		frameMags[i] = fft.ComputeMagnitude(f)
+		if frameMags[i] == nil {
+			return "", errors.New("fft compute magnitude returned nil (ensure fft.ComputeMagnitude is implemented)")
+		}
 	}
-	// ---------------------------
-	// Feature extraction (per-frame)
-	// ---------------------------
-	// features.Extract should take spectra and produce per-frame feature vectors.
-	// frameMags [][]float64 obtained from FFT
-	globalFeature := features.ExtractGlobalFeature(frameMags, localCfg.NumBins)
-	features.LogScaleFeature(globalFeature)
 
 	// ---------------------------
-	// Aggregate to global feature vector
+	// Aggregate to global feature vector (use median aggregation for robustness)
 	// ---------------------------
-	// Aggregate per-bin over frames using median.
 	globalFeature := features.AggregateGlobalFeatureMedian(frameMags, localCfg.NumBins)
-
-	// ---------------------------
-	// PHash from feature
-	// ---------------------------
-	globalFeature := features.AggregateGlobalFeature(frameMags, localCfg.NumBins)
+	if len(globalFeature) == 0 {
+		return "", errors.New("no global feature produced")
+	}
 	features.LogScaleFeature(globalFeature)
 
+	// ---------------------------
+	// PHash from feature -> 16-char hex
+	// ---------------------------
 	hashHex := hash.AudioPHashFromFeature(globalFeature)
+	if hashHex == "" {
+		return "", errors.New("failed to compute pHash")
+	}
 
 	return hashHex, nil
 }

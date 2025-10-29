@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/ast-jean/audiophash/cmd/audiophash" // adjust module path to your module
+	"github.com/ast-jean/audiophash/cmd/audiophash"
 	"github.com/ast-jean/audiophash/pkg/config"
 )
 
@@ -43,11 +43,11 @@ func TestPHashTable(t *testing.T) {
 			b2 := loadFile(t, tc.Variant)
 
 			// compute hashes (assumes detectors accept raw file bytes and format detection internally)
-			h1, err := audiophash.AudioPHashBytes(b1, &cfg)
+			h1, err := audiophash.AudioPHashBytes(b1, &cfg, "wav")
 			if err != nil {
 				t.Fatalf("hash base error: %v", err)
 			}
-			h2, err := audiophash.AudioPHashBytes(b2, &cfg)
+			h2, err := audiophash.AudioPHashBytes(b2, &cfg, "wav")
 			if err != nil {
 				t.Fatalf("hash variant error: %v", err)
 			}
