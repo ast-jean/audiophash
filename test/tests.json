@@ -1,36 +1,36 @@
 [
   {
     "id": "T01_same",
-    "base": "test/fixtures/base/a.wav",
-    "variant": "test/fixtures/base/a.wav",
+    "base": "./fixtures/base/a.wav",
+    "variant": "./fixtures/base/a.wav",
     "expectOp": "<=",
     "percent": 1.6
   },
   {
     "id": "T02_diff",
-    "base": "test/fixtures/base/a.wav",
-    "variant": "test/fixtures/base/b.wav",
+    "base": "./fixtures/base/a.wav",
+    "variant": "./fixtures/base/b.wav",
     "expectOp": ">=",
     "percent": 40.0
   },
   {
     "id": "T03_volume_plus6",
-    "base": "test/fixtures/base/a.wav",
-    "variant": "test/fixtures/variants/a_plus6dB.wav",
+    "base": "./fixtures/base/a.wav",
+    "variant": "./fixtures/variants/plus6dB_a.wav",
     "expectOp": "<=",
     "percent": 9.4
   },
   {
     "id": "T04_trunc_10",
-    "base": "test/fixtures/base/a.wav",
-    "variant": "test/fixtures/variants/a_trunc_90p.wav",
+    "base": "./fixtures/base/a.wav",
+    "variant": "./fixtures/variants/trunc_90p_a.wav",
     "expectOp": "<=",
     "percent": 8.0
   },
   {
     "id": "T05_compress",
-    "base": "test/fixtures/base/a.wav",
-    "variant": "test/fixtures/variants/a_128kbps.wav",
+    "base": "./fixtures/base/a.wav",
+    "variant": "./fixtures/variants/recompressed_128kbps_a.wav",
     "expectOp": "<=",
     "percent": 12.5
   }

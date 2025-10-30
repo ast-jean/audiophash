@@ -16,7 +16,7 @@ type Config struct {
 // DefaultConfig returns common defaults.
 func DefaultConfig(sr int) Config {
 	const defaultFrame = 2048
-	const defaultBins = 32
+	const defaultBins = 64
 	if sr <= 0 {
 		sr = 44100
 	}

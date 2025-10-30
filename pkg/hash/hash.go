@@ -1,6 +1,8 @@
 package hash
 
 import (
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"sort"
 )
@@ -41,4 +43,21 @@ func median(arr []float64) float64 {
 		return (sorted[n/2-1] + sorted[n/2]) / 2
 	}
 	return sorted[n/2]
+}
+
+// HexToUint64 decodes 16-char hex (64-bit) to uint64
+func HexToUint64(hexStr string) (uint64, error) {
+	if len(hexStr) != 16 {
+		// also allow leading 0s omitted? require 16 for strictness
+		return 0, errors.New("hex must be 16 chars")
+	}
+	b, err := hex.DecodeString(hexStr)
+	if err != nil {
+		return 0, err
+	}
+	var v uint64
+	for i := 0; i < 8; i++ {
+		v = (v << 8) | uint64(b[i])
+	}
+	return v, nil
 }
