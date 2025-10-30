@@ -1,4 +1,4 @@
-# Audio Perceptual Hashing in Go
+# Audio Perceptual Hashing in Golang
 
 This project implements a **16-character perceptual hash (pHash) for audio files** using Go. It is designed to produce a compact fingerprint representing the perceptual content of an audio file, robust to minor distortions, volume changes, compression, and truncation.
 
